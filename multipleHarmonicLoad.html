@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Música para Biodanza</title>
+    <!-- Bootstrap 4 CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            padding-bottom: 120px;
+        }
+        .file-info {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 4px;
+        }
+        .audio-player {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #343a40;
+            color: white;
+            padding: 15px;
+            z-index: 1000;
+        }
+        .queue-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .current-row {
+            background-color: #e6f7ff !important;
+        }
+        .processing-row {
+            background-color: #fff3cd !important;
+        }
+        .success-row {
+            background-color: #d4edda !important;
+        }
+        .error-row {
+            background-color: #f8d7da !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">Gestor de Música para Biodanza</h1>
+        
+        <!-- Formulario de configuración -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                Configuración
+            </div>
+            <div class="card-body">
+                <form id="configForm">
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label for="githubUser">Usuario de GitHub</label>
+                            <input type="text" class="form-control" id="githubUser" required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="repository">Repositorio GitHub</label>
+                            <input type="text" class="form-control" id="repository" required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="githubToken">Token GitHub</label>
+                            <input type="password" class="form-control" id="githubToken" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="biodanzaUser">Usuario IloveBiodanza (email)</label>
+                            <input type="email" class="form-control" id="biodanzaUser" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="biodanzaToken">Token IloveBiodanza</label>
+                            <input type="password" class="form-control" id="biodanzaToken" required>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="selectFolderBtn">
+                        Seleccionar Carpeta de Música
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabla de archivos -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="filesTable">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Carpeta</th>
+                        <th>Archivo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="filesTableBody">
+                    <!-- Filas se agregarán dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Indicador de cola -->
+    <div class="queue-indicator alert alert-info" id="queueIndicator" style="display: none;">
+        <strong>En cola:</strong> <span id="queueCount">0</span> archivos
+    </div>
+
+    <!-- Reproductor de audio -->
+    <div class="audio-player" id="audioPlayer" style="display: none;">
+        <div class="container">
+            <p id="nowPlaying">Selecciona una canción para reproducir</p>
+            <audio controls class="w-100" id="audioElement"></audio>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS y dependencias -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Variables globales
+        let audio = document.getElementById('audioElement');
+        let nowPlaying = document.getElementById('nowPlaying');
+        let currentFiles = [];
+        let currentIndex = -1;
+        let processingQueue = [];
+        let isProcessing = false;
+        
+        // Elementos del DOM
+        const configForm = document.getElementById('configForm');
+        const filesTableBody = document.getElementById('filesTableBody');
+        const queueIndicator = document.getElementById('queueIndicator');
+        const queueCount = document.getElementById('queueCount');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const selectFolderBtn = document.getElementById('selectFolderBtn');
+
+        // Event listeners
+        selectFolderBtn.addEventListener('click', selectFolder);
+
+        async function selectFolder() {
+            try {
+                // Validar formulario
+                const githubUser = document.getElementById('githubUser').value;
+                const repository = document.getElementById('repository').value;
+                const githubToken = document.getElementById('githubToken').value;
+                const biodanzaUser = document.getElementById('biodanzaUser').value;
+                const biodanzaToken = document.getElementById('biodanzaToken').value;
+                
+                if (!githubUser || !repository || !githubToken || !biodanzaUser || !biodanzaToken) {
+                    alert('Por favor complete todos los campos de configuración');
+                    return;
+                }
+
+                const folderHandle = await window.showDirectoryPicker();
+                const files = await readFolder(folderHandle, folderHandle.name);
+                currentFiles = files;
+                displayFiles(files);
+            } catch (error) {
+                console.error('Error al seleccionar la carpeta:', error);
+                alert('Error al acceder a la carpeta. Asegúrese de conceder los permisos necesarios.');
+            }
+        }
+
+        async function readFolder(folderHandle, basePath) {
+            const files = [];
+            for await (const entry of folderHandle.values()) {
+                if (entry.kind === 'file') {
+                    const fileName = entry.name.toLowerCase();
+                    if (fileName.endsWith('.mp3') || fileName.endsWith('.wav') || fileName.endsWith('.ogg') || 
+                        fileName.endsWith('.m4a') || fileName.endsWith('.flac')) {
+                        files.push({ 
+                            folder: basePath, 
+                            fileName: entry.name,
+                            fileHandle: entry,
+                            extension: entry.name.split('.').pop().toLowerCase()
+                        });
+                    }
+                } else if (entry.kind === 'directory') {
+                    const subFiles = await readFolder(entry, `${basePath}/${entry.name}`);
+                    files.push(...subFiles);
+                }
+            }
+            return files;
+        }
+
+        function displayFiles(files) {
+            filesTableBody.innerHTML = '';
+            
+            if (files.length === 0) {
+                filesTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="text-center">No se encontraron archivos de música en la carpeta seleccionada.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Ordenar archivos por carpeta y nombre
+            files.sort((a, b) => {
+                if (a.folder < b.folder) return -1;
+                if (a.folder > b.folder) return 1;
+                return a.fileName.localeCompare(b.fileName);
+            });
+
+            files.forEach((file, index) => {
+                const row = document.createElement('tr');
+                row.setAttribute('data-index', index);
+                
+                // Columna Carpeta
+                const folderCell = document.createElement('td');
+                folderCell.textContent = file.folder;
+                
+                // Columna Archivo
+                const fileCell = document.createElement('td');
+                
+                const fileNameDiv = document.createElement('div');
+                fileNameDiv.textContent = file.fileName;
+                
+                const fileInfoDiv = document.createElement('div');
+                fileInfoDiv.className = 'file-info mt-2';
+                
+                // Inputs para metadatos
+                fileInfoDiv.innerHTML = `
+                    <div class="form-row">
+                        <div class="form-group col-md-3">
+                            <label class="small">Carpeta GitHub</label>
+                            <input type="text" class="form-control form-control-sm folder-input" 
+                                   placeholder="ej: music/biodanza" value="">
+                        </div>
+                        <div class="form-group col-md-2">
+                            <label class="small">Código</label>
+                            <input type="text" class="form-control form-control-sm code-input" 
+                                   placeholder="ej: BD001">
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label class="small">Título</label>
+                            <input type="text" class="form-control form-control-sm title-input" 
+                                   placeholder="Título de la música">
+                        </div>
+                        <div class="form-group col-md-2">
+                            <label class="small">Autor/Intérprete</label>
+                            <input type="text" class="form-control form-control-sm author-input" 
+                                   placeholder="Autor(es)">
+                        </div>
+                        <div class="form-group col-md-2">
+                            <label class="small">Línea</label>
+                            <select class="form-control form-control-sm line-input">
+                                <option value="">Seleccionar</option>
+                                <option value="Afectividad">Afectividad</option>
+                                <option value="Creatividad">Creatividad</option>
+                                <option value="Sexualidad">Sexualidad</option>
+                                <option value="Trascendencia">Trascendencia</option>
+                                <option value="Vitalidad">Vitalidad</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+                
+                fileCell.appendChild(fileNameDiv);
+                fileCell.appendChild(fileInfoDiv);
+                
+                // Columna Acciones
+                const actionsCell = document.createElement('td');
+                actionsCell.className = 'text-nowrap';
+                
+                const playBtn = document.createElement('button');
+                playBtn.className = 'btn btn-sm btn-success mr-2';
+                playBtn.textContent = 'Reproducir';
+                playBtn.onclick = () => playFile(index);
+                
+                const addBtn = document.createElement('button');
+                addBtn.className = 'btn btn-sm btn-primary';
+                addBtn.textContent = 'Agregar';
+                addBtn.onclick = () => addToQueue(index);
+                
+                actionsCell.appendChild(playBtn);
+                actionsCell.appendChild(addBtn);
+                
+                // Construir fila
+                row.appendChild(folderCell);
+                row.appendChild(fileCell);
+                row.appendChild(actionsCell);
+                
+                filesTableBody.appendChild(row);
+            });
+        }
+
+        function playFile(index) {
+            const file = currentFiles[index];
+            
+            // Resaltar fila actual
+            document.querySelectorAll('#filesTableBody tr.current-row').forEach(row => {
+                row.classList.remove('current-row');
+            });
+            document.querySelector(`#filesTableBody tr[data-index="${index}"]`).classList.add('current-row');
+            
+            file.fileHandle.getFile().then(fileObj => {
+                const audioUrl = URL.createObjectURL(fileObj);
+                audio.src = audioUrl;
+                audio.play();
+                nowPlaying.textContent = `Reproduciendo: ${file.fileName} (${file.folder})`;
+                audioPlayer.style.display = 'block';
+            }).catch(error => {
+                console.error('Error al reproducir el archivo:', error);
+                nowPlaying.textContent = `Error al reproducir: ${file.fileName}`;
+            });
+        }
+
+        function addToQueue(index) {
+            const row = document.querySelector(`#filesTableBody tr[data-index="${index}"]`);
+            const inputs = row.querySelectorAll('input, select');
+            
+            // Validar campos
+            let isValid = true;
+            inputs.forEach(input => {
+                if (input.value.trim() === '' && input.className !== 'line-input') {
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+            
+            if (!isValid) {
+                alert('Por favor complete todos los campos requeridos.');
+                return;
+            }
+            
+            // Agregar a la cola
+            processingQueue.push(index);
+            updateQueueIndicator();
+            
+            // Iniciar procesamiento si no está en curso
+            if (!isProcessing) {
+                processQueue();
+            }
+        }
+
+        function updateQueueIndicator() {
+            if (processingQueue.length > 0) {
+                queueCount.textContent = processingQueue.length;
+                queueIndicator.style.display = 'block';
+            } else {
+                queueIndicator.style.display = 'none';
+            }
+        }
+
+        async function processQueue() {
+            if (processingQueue.length === 0) {
+                isProcessing = false;
+                return;
+            }
+            
+            isProcessing = true;
+            const index = processingQueue[0];
+            const file = currentFiles[index];
+            const row = document.querySelector(`#filesTableBody tr[data-index="${index}"]`);
+            
+            try {
+                // Marcar como procesando
+                row.classList.add('processing-row');
+                row.classList.remove('error-row', 'success-row');
+                
+                // Obtener datos del formulario
+                const githubFolder = row.querySelector('.folder-input').value.trim();
+                const code = row.querySelector('.code-input').value.trim();
+                const title = row.querySelector('.title-input').value.trim();
+                const author = row.querySelector('.author-input').value.trim();
+                const line = row.querySelector('.line-input').value;
+                
+                // Obtener configuración
+                const githubUser = document.getElementById('githubUser').value;
+                const repository = document.getElementById('repository').value;
+                const githubToken = document.getElementById('githubToken').value;
+                const biodanzaUser = document.getElementById('biodanzaUser').value;
+                const biodanzaToken = document.getElementById('biodanzaToken').value;
+                
+                // 1. Subir a GitHub
+                const newFileName = `${code} - ${title} - ${author}.${file.extension}`;
+                const githubPath = `${githubFolder}/${newFileName}`.replace(/\/+/g, '/');
+                
+                const fileContent = await file.fileHandle.getFile();
+                const content = await fileContent.arrayBuffer();
+                
+                const githubUrl = `https://api.github.com/repos/${githubUser}/${repository}/contents/${githubPath}`;
+                
+                const githubResponse = await fetch(githubUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Add music file: ${newFileName}`,
+                        content: arrayBufferToBase64(content)
+                    })
+                });
+                
+                if (!githubResponse.ok) {
+                    throw new Error('Error al subir a GitHub: ' + await githubResponse.text());
+                }
+                
+                // 2. Guardar en IloveBiodanza
+                const isOgg = file.extension.toLowerCase() === 'ogg';
+                const fileUrl = `https://${githubUser}.github.io/${repository}/${githubPath}`;
+                
+                const biodanzaData = {
+                    user: biodanzaUser,
+                    token: biodanzaToken,
+                    title: title,
+                    code: code,
+                    author: author,
+                    description:'',
+                    line: line,
+                    mp3: isOgg ? '' : fileUrl,
+                    ogg: isOgg ? fileUrl : ''
+                };
+                
+                // Aquí debes reemplazar con la URL real de la API de IloveBiodanza
+//                const biodanzaUrl = 'https://ilovebiodanza.top/musics/api/create'; // URL de ejemplo
+                const biodanzaUrl = 'http://localhost:3000/musics/api/create'; // URL de ejemplo
+                
+                const biodanzaResponse = await fetch(biodanzaUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(biodanzaData)
+                });
+                
+                if (!biodanzaResponse.ok) {
+                    throw new Error('Error al guardar en IloveBiodanza: ' + await biodanzaResponse.text());
+                }
+                
+                // Éxito
+                row.classList.remove('processing-row');
+                row.classList.add('success-row');
+                
+            } catch (error) {
+                console.error('Error procesando archivo:', error);
+                row.classList.remove('processing-row');
+                row.classList.add('error-row');
+                
+                // Mostrar error al usuario
+                alert(`Error al procesar el archivo ${file.fileName}: ${error.message}`);
+            } finally {
+                // Eliminar de la cola
+                processingQueue.shift();
+                updateQueueIndicator();
+                
+                // Procesar siguiente
+                setTimeout(processQueue, 1000); // Pequeña pausa entre archivos
+            }
+        }
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+    </script>
+</body>
+</html>
