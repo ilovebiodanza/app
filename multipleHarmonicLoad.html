@@ -144,10 +144,10 @@
         selectFolderBtn.addEventListener('click', selectFolder);
         document.addEventListener('DOMContentLoaded', function() {
             const url = new URL(window.location.href);
-            document.querySelector("#githubUser").value = atob(url.searchParams["gho"]);
-            document.querySelector("#repository").value = atob(url.searchParams["ghrm"]);
+            document.querySelector("#githubUser").value = (url.searchParams["gho"]);
+            document.querySelector("#repository").value = (url.searchParams["ghrm"]);
             document.querySelector("#githubToken").value = url.searchParams["ght"];
-            document.querySelector("#biodanzaUser").value = atob(url.searchParams["uem"]);
+            document.querySelector("#biodanzaUser").value = (url.searchParams["uem"]);
             document.querySelector("#biodanzaToken").value = url.searchParams["tilb"];
         });
 
