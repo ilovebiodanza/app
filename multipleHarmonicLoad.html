@@ -548,13 +548,13 @@
                 
                 const biodanzaResponse = await fetch(biodanzaUrl, {
                     method: 'POST',
-                    mode: 'no-cors',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${biodanzaToken}`
                     },
                     body: JSON.stringify(biodanzaData)
                 });
+//                    mode: 'no-cors',
                 
                 if (!biodanzaResponse.ok) {
                     throw new Error('Error al guardar en IloveBiodanza: ' + await biodanzaResponse.text());
