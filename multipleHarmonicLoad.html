@@ -144,7 +144,7 @@
         selectFolderBtn.addEventListener('click', selectFolder);
         document.addEventListener('DOMContentLoaded', function() {
             const url = new URL(window.location.href);
-            console.log(url);
+            console.log(url.searchParams);
             document.querySelector("#githubUser").value = url.searchParams["gho"];
             document.querySelector("#repository").value = url.searchParams["ghrm"];
             document.querySelector("#githubToken").value = url.searchParams["ght"];
