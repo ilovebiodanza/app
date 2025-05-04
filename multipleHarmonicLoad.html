@@ -150,6 +150,12 @@
             document.querySelector("#githubToken").value = url.searchParams["ght"];
             document.querySelector("#biodanzaUser").value = url.searchParams["uem"];
             document.querySelector("#biodanzaToken").value = url.searchParams["tilb"];
+const params = url.searchParams;
+const variables = {};
+params.forEach((value, key) => {
+    variables[key] = value;
+});
+console.log(variables);
         });
 
         async function selectFolder() {
