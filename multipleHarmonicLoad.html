@@ -439,6 +439,7 @@
                 
                 const biodanzaResponse = await fetch(biodanzaUrl, {
                     method: 'POST',
+                    mode: 'no-cors',
                     headers: {
                         'Content-Type': 'application/json'
                     },
