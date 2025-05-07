@@ -1,0 +1,133 @@
+.highcharts-figure {
+  max-width: 900px;
+  min-width: 320px;
+  margin: 0 auto;
+  position: relative;
+}
+#module-name{
+  display:none;
+}
+.module-name{
+  position: fixed; 
+  font-weight: bolder; 
+  z-index: 3
+}
+a {
+  text-decoration: none;
+}
+.mrp-player {
+  width: 340px;
+  padding: 5px 10px;
+  position: relative;
+  left: -35px;
+  top:-10px;
+  margin-left: -150px;
+  border-radius: 20px; /* Aumentado para bordes más redondeados */
+  background: white;
+  background-clip: padding-box;
+  justify-content: center;
+  align-items: center;
+  font-family: Arial, sans-serif;
+}
+.mrp-player::before {
+  position: absolute;
+  content: '';
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
+  left: -3px;
+  top: -3px;
+  background: linear-gradient(to left, blue, orange);
+  z-index: -1;
+  border-radius:20px;
+  position: absolute;
+  content: '';
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
+  left: -3px;
+  top: -3px;
+}
+.mrp-carrusel {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  background-color: white;
+  position: relative;
+}
+.mrp-texto {
+  display: inline-block;
+  padding: 5px;
+  animation: mrp-scroll 30s linear infinite; /* Ajusta la duración aquí */
+}
+@keyframes mrp-scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+@keyframes heartbeat {
+  0%, 20%, 40%, 60%, 80%, 100% {
+      transform: scale(1);
+  }
+  10%, 30%, 50%, 70%, 90% {
+      transform: scale(1.2);
+  }
+}
+#overlay {
+  display: none;
+}
+.heart {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 150px; /* Aumentado en un 50% */
+  color: red;
+  animation: heartbeat 1s infinite;
+}
+#timer {
+  position: absolute;
+  font-size: 30px; /* Tamaño del cronómetro */
+  color: white;
+}
+
+
+.cint-carrusel {
+  overflow: hidden; /* Oculta el contenido que se desborda */
+  white-space: nowrap; /* Mantiene el contenido en una sola línea */
+  position: relative;
+  width: 100%; /* Asegura que el contenedor ocupe todo el ancho disponible */
+  box-sizing: border-box; /* Incluye padding y borde en el ancho total */
+}
+
+.cint-texto {
+  display: inline-block;
+  animation: cint-scroll 30s linear infinite; /* Ajusta la duración aquí */
+  white-space: nowrap; /* Asegura que el texto no se divida en varias líneas */
+}
+
+@keyframes cint-scroll {
+  0% { transform: translateX(100%); }  /* Empieza fuera de la pantalla a la derecha */
+  100% { transform: translateX(-100%); } /* Sale completamente por la izquierda */
+}
+.text-truncate {
+  overflow: hidden;          /* Oculta el contenido desbordante */
+  white-space: nowrap;      /* Evita saltos de línea */
+  text-overflow: ellipsis;  /* Muestra puntos suspensivos al final */
+  display: block;           /* Asegura que el elemento ocupe el ancho completo */
+  width: 100%;              /* Asegura que ocupe el ancho completo del contenedor */
+}
+.action-buttons {
+  display: flex;            /* Activa Flexbox */
+  justify-content: flex-end; /* Alinea a la derecha */
+  align-items: center;     /* Alinea verticalmente al centro */
+  white-space: nowrap;     /* Evita que el texto se ajuste */
+  gap: 5px;                /* Espacio entre los botones */
+}
+.description-container {
+  max-height: 33.33vh; /* Limita la altura máxima a un tercio de la altura de la pantalla */
+  overflow-y: auto;    /* Agrega un scroll vertical si el contenido desborda */
+}
