@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Música para Biodanza</title>
-    <!-- Bootstrap 4 CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Bootstrap 4 CSS 
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"> -->
+    <link id="tema" rel="stylesheet" href="bootstrap.min.cerulean.css"> <!-- Tema por defecto -->
     <!-- Summernote CSS -->
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css" rel="stylesheet">
     <style>
@@ -589,6 +590,27 @@
             }
             return window.btoa(binary);
         }
+    </script>
+    <script>
+            function cargarTema() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const tema = urlParams.get('tema') || 'cerulean'; // Tema por defecto si no se especifica
+                const temasDisponibles = [
+                    'cerulean', 'ciborg', 'cosmo', 'darkly', 'flatly', 
+                    'journal', 'litera', 'lumen', 'lux', 'materia', 
+                    'minty', 'pulse', 'sandstone', 'simplex', 'sketchy', 
+                    'slate', 'solar', 'spacelab', 'superhero', 'united', 
+                    'yeti'
+                ];
+            
+                if (temasDisponibles.includes(tema)) {
+                    document.getElementById('tema').href = `bootstrap.min.${tema}.css`;
+                } else {
+                    console.warn('Tema no válido. Se cargará el tema por defecto.');
+                }
+            }
+            window.onload = cargarTema;
+
     </script>
 </body>
 </html>
